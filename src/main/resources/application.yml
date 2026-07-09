@@ -1,0 +1,13 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: vehicle-platform
+
+  data:
+    mongodb:
+      uri: mongodb://platform_user:platform_pass@localhost:27017/vehicle_platform_db?authSource=admin
+
+vehicle-sale-service:
+  base-url: http://localhost:8080
