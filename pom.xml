@@ -28,7 +28,17 @@
 	</scm>
 	<properties>
 		<java.version>17</java.version>
+		<kotlin.jvm.target>17</kotlin.jvm.target>
 		<kotlin.version>1.9.25</kotlin.version>
+
+		<sonar.organization>fa-sousa</sonar.organization>
+		<sonar.projectKey>fa-sousa_vehicle-platform</sonar.projectKey>
+		<sonar.projectName>vehicle-platform</sonar.projectName>
+		<sonar.host.url>https://sonarcloud.io</sonar.host.url>
+
+		<sonar.coverage.jacoco.xmlReportPaths>
+			${project.build.directory}/site/jacoco/jacoco.xml
+		</sonar.coverage.jacoco.xmlReportPaths>
 	</properties>
 	<dependencies>
 			<dependency>
@@ -124,7 +134,7 @@
 										<limit>
 											<counter>LINE</counter>
 											<value>COVEREDRATIO</value>
-											<minimum>0.40</minimum>
+											<minimum>0.80</minimum>
 										</limit>
 									</limits>
 								</rule>
