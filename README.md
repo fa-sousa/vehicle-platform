@@ -1,9 +1,17 @@
 # Vehicle Platform
 
-Microsserviço responsável por orquestrar as operações da plataforma de venda de veículos.
+Microsserviço responsável por orquestrar o fluxo de compra de veículos.
 
-A aplicação recebe solicitações de compra, comunica-se via HTTP com o
-`vehicle-sale-service` e registra os eventos da operação no MongoDB.
+A aplicação recebe a solicitação do cliente, chama o `vehicle-sale-service`
+por HTTP e registra o evento da operação no MongoDB.
+
+## Responsabilidades
+
+- Receber solicitações de compra;
+- Comunicar-se com o `vehicle-sale-service`;
+- Consolidar a resposta da compra;
+- Registrar eventos no MongoDB;
+- Isolar o cliente da implementação interna do serviço de vendas.
 
 ## Arquitetura
 
@@ -14,7 +22,7 @@ Cliente
    v
 Vehicle Platform :8082
    |
-   | HTTP
+   | WebClient / HTTP
    v
 Vehicle Sale Service :8080
    |
@@ -27,235 +35,7 @@ Vehicle Platform
 MongoDB
 ```
 
-## Responsabilidades
-
-### Vehicle Platform
-
-- Receber solicitações de compra;
-- Chamar o `vehicle-sale-service`;
-- Registrar eventos da operação no MongoDB;
-- Retornar uma resposta consolidada ao cliente.
-
-### Vehicle Sale Service
-
-- Cadastrar e atualizar veículos;
-- Listar veículos disponíveis e vendidos;
-- Validar a disponibilidade do veículo;
-- Criar a venda;
-- Alterar o veículo para `PENDING_PAYMENT`;
-- Persistir veículos e vendas no PostgreSQL.
-
-## Tecnologias
-
-- Kotlin
-- Java 17
-- Spring Boot
-- Spring Web
-- Spring WebFlux/WebClient
-- Spring Data MongoDB
-- MongoDB
-- Maven
-- Docker
-- JUnit 5
-- Mockito
-
-## Pré-requisitos
-
-- Java 17
-- Maven 3.8 ou superior
-- Docker
-- Docker Compose
-- `vehicle-sale-service` rodando na porta `8080`
-
-## Configuração
-
-A aplicação utiliza as seguintes configurações:
-
-```yaml
-server:
-  port: 8082
-
-spring:
-  application:
-    name: vehicle-platform
-
-  data:
-    mongodb:
-      uri: mongodb://platform_user:platform_pass@localhost:27017/vehicle_platform_db?authSource=admin
-
-vehicle-sale-service:
-  base-url: http://localhost:8080
-```
-
-## Como executar localmente
-
-Durante o desenvolvimento, recomenda-se executar apenas os bancos no Docker
-e as aplicações pelo Maven.
-
-### 1. Subir o PostgreSQL do Vehicle Sale Service
-
-No projeto `vehicle-sale-service`:
-
-```bash
-docker compose up -d postgres
-```
-
-Caso o serviço do Docker Compose tenha outro nome, execute:
-
-```bash
-docker compose up -d
-docker stop vehicle_sale_service_app
-```
-
-O PostgreSQL ficará disponível na porta `5434`.
-
-### 2. Executar o Vehicle Sale Service
-
-No projeto `vehicle-sale-service`:
-
-```bash
-mvn spring-boot:run
-```
-
-A aplicação ficará disponível em:
-
-```text
-http://localhost:8080
-```
-
-Swagger:
-
-```text
-http://localhost:8080/swagger-ui/index.html
-```
-
-### 3. Subir o MongoDB
-
-No projeto `vehicle-platform`:
-
-```bash
-docker compose up -d
-```
-
-O MongoDB ficará disponível na porta `27017`.
-
-### 4. Executar o Vehicle Platform
-
-```bash
-mvn spring-boot:run
-```
-
-A aplicação ficará disponível em:
-
-```text
-http://localhost:8082
-```
-
-## Fluxo de compra
-
-1. Um veículo é cadastrado no `vehicle-sale-service`;
-2. O veículo recebe o status `AVAILABLE`;
-3. O cliente solicita a compra pela `vehicle-platform`;
-4. A platform chama o endpoint de compra do `vehicle-sale-service`;
-5. O sale service valida se o veículo está disponível;
-6. O status do veículo é alterado para `PENDING_PAYMENT`;
-7. Uma venda com pagamento `PENDING` é criada;
-8. A platform registra um evento no MongoDB;
-9. A resposta consolidada é devolvida ao cliente.
-
-## Endpoints
-
-### Vehicle Platform
-
-#### Solicitar compra
-
-```http
-POST /api/platform/vehicles/{vehicleId}/purchase
-```
-
-Exemplo:
-
-```bash
-curl -X POST http://localhost:8082/api/platform/vehicles/1/purchase \
-  -H "Content-Type: application/json" \
-  -d '{
-    "cpf": "12345678900"
-  }'
-```
-
-Exemplo de resposta:
-
-```json
-{
-  "saleId": 1,
-  "vehicleId": 1,
-  "cpf": "12345678900",
-  "paymentCode": "74ff6036-0597-498e-98b4-932cf0667506",
-  "paymentStatus": "PENDING",
-  "platformEventId": "6870247624e8121b5f57df91"
-}
-```
-
-### Vehicle Sale Service
-
-```http
-POST /api/vehicles
-GET /api/vehicles/available
-GET /api/vehicles/sold
-PUT /api/vehicles/{id}
-POST /api/vehicles/{id}/purchase
-```
-
-## Exemplo de teste completo
-
-### 1. Cadastrar um veículo
-
-```bash
-curl -X POST http://localhost:8080/api/vehicles \
-  -H "Content-Type: application/json" \
-  -d '{
-    "brand": "Honda",
-    "model": "Civic",
-    "year": 2024,
-    "color": "Prata",
-    "price": 125000.00
-  }'
-```
-
-### 2. Consultar veículos disponíveis
-
-```bash
-curl http://localhost:8080/api/vehicles/available
-```
-
-### 3. Comprar pela platform
-
-Utilize um ID retornado como `AVAILABLE`:
-
-```bash
-curl -X POST http://localhost:8082/api/platform/vehicles/1/purchase \
-  -H "Content-Type: application/json" \
-  -d '{
-    "cpf": "12345678900"
-  }'
-```
-
-> Cada veículo disponível deve ser comprado somente uma vez. Após a
-> solicitação, o status muda para `PENDING_PAYMENT`.
-
-## Executar testes
-
-```bash
-mvn clean test
-```
-
-Para executar build e testes:
-
-```bash
-mvn clean verify
-```
-
-## Estrutura do projeto
+## Estrutura
 
 ```text
 src/main/kotlin/com/fasousa/vehicleplatform
@@ -276,36 +56,229 @@ src/main/kotlin/com/fasousa/vehicleplatform
 └── VehiclePlatformApplication.kt
 ```
 
-## Bancos de dados
+## Tecnologias
 
-### Vehicle Platform
-
+- Kotlin
+- Java 17
+- Spring Boot 3
+- Spring Web
+- Spring WebFlux
+- WebClient
+- Spring Data MongoDB
 - MongoDB
-- Database: `vehicle_platform_db`
-- Collection: `payment_events`
-- Porta local: `27017`
+- Maven
+- Docker
+- Docker Compose
+- JUnit 5
+- Mockito
+- JaCoCo
 
-### Vehicle Sale Service
+## Pré-requisitos
 
-- PostgreSQL
-- Database: `vehicle_sale_service_db`
-- Porta local: `5434`
+- Java 17
+- Maven
+- Docker
+- Docker Compose
+- `vehicle-sale-service` disponível em `http://localhost:8080`
 
-## Regras importantes
+## Configuração
 
-- Apenas veículos com status `AVAILABLE` podem ser comprados;
-- Ao iniciar a compra, o status passa para `PENDING_PAYMENT`;
-- A platform não deve duplicar as regras do sale service;
-- O sale service é o responsável pelas regras de domínio;
-- A platform é responsável pela orquestração e registro do evento.
+```yaml
+server:
+  port: 8082
 
-## Saúde da aplicação
+spring:
+  application:
+    name: vehicle-platform
 
-```text
-GET http://localhost:8082/actuator/health
+  data:
+    mongodb:
+      uri: mongodb://platform_user:platform_pass@localhost:27017/vehicle_platform_db?authSource=admin
+
+vehicle-sale-service:
+  base-url: http://localhost:8080
 ```
 
-## Repositórios
+## Executar durante o desenvolvimento
 
-- `vehicle-platform`: microsserviço de orquestração;
-- `vehicle-sale-service`: microsserviço de veículos e vendas.
+### 1. Subir o MongoDB
+
+```bash
+docker compose up -d mongodb
+```
+
+### 2. Executar a aplicação
+
+```bash
+mvn spring-boot:run
+```
+
+A aplicação ficará disponível em:
+
+```text
+http://localhost:8082
+```
+
+## Ordem para executar todo o ambiente
+
+### Terminal 1 — Vehicle Sale Service
+
+```bash
+cd ~/vehicle-sale-service
+docker compose up -d postgres
+mvn spring-boot:run
+```
+
+### Terminal 2 — Vehicle Platform
+
+```bash
+cd ~/vehicle-platform
+docker compose up -d mongodb
+mvn spring-boot:run
+```
+
+## Endpoint
+
+### Iniciar compra pela plataforma
+
+```http
+POST /api/platform/vehicles/{vehicleId}/purchase
+```
+
+Body:
+
+```json
+{
+  "cpf": "12345678900"
+}
+```
+
+Resposta:
+
+```json
+{
+  "saleId": 1,
+  "vehicleId": 1,
+  "cpf": "12345678900",
+  "paymentCode": "1855f7f0-3395-455a-bca4-a249695311e0",
+  "paymentStatus": "PENDING",
+  "platformEventId": "6870247624e8121b5f57df91"
+}
+```
+
+## Fluxo de compra
+
+1. O cliente solicita a compra à platform;
+2. A platform chama o sale service;
+3. O sale service valida o veículo;
+4. O veículo muda para `PENDING_PAYMENT`;
+5. A venda é salva no PostgreSQL;
+6. O sale service devolve a venda;
+7. A platform registra o evento no MongoDB;
+8. A resposta consolidada é devolvida ao cliente.
+
+## Teste manual
+
+Primeiro, cadastre um veículo no sale service:
+
+```bash
+curl -X POST http://localhost:8080/api/vehicles \
+  -H "Content-Type: application/json" \
+  -d '{
+    "brand": "Toyota",
+    "model": "Corolla",
+    "year": 2024,
+    "color": "Preto",
+    "price": 130000.00
+  }'
+```
+
+Consulte o ID disponível:
+
+```bash
+curl http://localhost:8080/api/vehicles/available
+```
+
+Compre exclusivamente pela platform:
+
+```bash
+curl -X POST http://localhost:8082/api/platform/vehicles/1/purchase \
+  -H "Content-Type: application/json" \
+  -d '{"cpf":"12345678900"}'
+```
+
+Não compre antes diretamente no sale service, pois isso muda o veículo para
+`PENDING_PAYMENT`.
+
+## MongoDB
+
+Database:
+
+```text
+vehicle_platform_db
+```
+
+Collection:
+
+```text
+payment_events
+```
+
+Credenciais locais:
+
+```text
+Usuário: platform_user
+Senha: platform_pass
+Porta: 27017
+```
+
+## Testes
+
+```bash
+mvn clean test
+```
+
+Cobertura:
+
+```bash
+mvn clean verify
+```
+
+Relatório:
+
+```text
+target/site/jacoco/index.html
+```
+
+## Respostas de erro
+
+### 400 — Bad Request
+
+Corpo da requisição inválido ou CPF ausente/inválido.
+
+### 404 — Not Found
+
+O sale service informou que o veículo solicitado não existe.
+
+### 409 — Conflict
+
+O sale service informou que o veículo não está disponível.
+
+### 502 — Bad Gateway
+
+A platform não conseguiu se comunicar com o sale service ou recebeu resposta inválida.
+
+### 503 — Service Unavailable
+
+O serviço de vendas está temporariamente indisponível.
+
+## Health check
+
+```text
+GET /actuator/health
+```
+
+## Repositórios relacionados
+
+- `vehicle-platform`: orquestração e MongoDB;
+- `vehicle-sale-service`: domínio de veículos, vendas e PostgreSQL.
