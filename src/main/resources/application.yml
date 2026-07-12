@@ -7,7 +7,8 @@ spring:
 
   data:
     mongodb:
-      uri: mongodb://platform_user:platform_pass@localhost:27017/vehicle_platform_db?authSource=admin
+      uri: ${MONGODB_URI:mongodb://localhost:27017/vehicle_platform_db}
 
 vehicle-sale-service:
-  base-url: http://localhost:8080
+  base-url: ${VEHICLE_SALE_SERVICE_URL:http://localhost:8080}
+  timeout: ${VEHICLE_SALE_SERVICE_TIMEOUT:5000}

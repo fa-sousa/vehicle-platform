@@ -72,7 +72,6 @@ class PlatformPurchaseServiceTest {
         // THEN
         assertEquals(50L, response.saleId)
         assertEquals(vehicleId, response.vehicleId)
-        assertEquals(cpf, response.cpf)
         assertEquals("payment-123", response.paymentCode)
         assertEquals("PENDING", response.paymentStatus)
         assertEquals("event-123", response.platformEventId)

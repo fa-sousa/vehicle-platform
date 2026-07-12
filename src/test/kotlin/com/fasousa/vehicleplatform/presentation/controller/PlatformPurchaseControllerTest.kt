@@ -34,7 +34,6 @@ class PlatformPurchaseControllerTest {
         val expectedResponse = PlatformPurchaseResponse(
             saleId = 10L,
             vehicleId = vehicleId,
-            cpf = cpf,
             paymentCode = "payment-123",
             paymentStatus = "PENDING",
             platformEventId = "event-123"
