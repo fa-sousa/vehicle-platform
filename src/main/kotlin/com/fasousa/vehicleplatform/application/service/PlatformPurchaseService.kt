@@ -31,7 +31,6 @@ class PlatformPurchaseService(
         return PlatformPurchaseResponse(
             saleId = saleResponse.id,
             vehicleId = saleResponse.vehicleId,
-            cpf = saleResponse.cpf,
             paymentCode = saleResponse.paymentCode,
             paymentStatus = saleResponse.paymentStatus,
             platformEventId = savedEvent.id

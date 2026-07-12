@@ -3,6 +3,7 @@ package com.fasousa.vehicleplatform.presentation.controller
 import com.fasousa.vehicleplatform.application.service.PlatformPurchaseService
 import com.fasousa.vehicleplatform.presentation.dto.PlatformPurchaseRequest
 import com.fasousa.vehicleplatform.presentation.dto.PlatformPurchaseResponse
+import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
 
@@ -16,7 +17,7 @@ class PlatformPurchaseController(
     @ResponseStatus(HttpStatus.CREATED)
     fun purchaseVehicle(
         @PathVariable vehicleId: Long,
-        @RequestBody request: PlatformPurchaseRequest
+        @Valid @RequestBody request: PlatformPurchaseRequest
     ): PlatformPurchaseResponse {
         return platformPurchaseService.purchase(
             vehicleId = vehicleId,
