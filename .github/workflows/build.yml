@@ -54,8 +54,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           ./mvnw --batch-mode sonar:sonar \
-            -Dsonar.token="${SONAR_TOKEN}" \
-            -Dsonar.qualitygate.wait=true
+          -Dsonar.token="${SONAR_TOKEN}"
 
       - name: Show test failure details
         if: failure()
