@@ -1,0 +1,81 @@
+name: Build and SonarQube
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+
+  pull_request:
+    branches:
+      - develop
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+jobs:
+  build:
+    name: Build, Tests and SonarQube
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pull-requests: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Grant Maven Wrapper permission
+        run: chmod +x mvnw
+
+      - name: Show checked-out configuration
+        run: |
+          echo "Branch or ref:"
+          echo "${GITHUB_REF}"
+
+          echo "Commit:"
+          git rev-parse HEAD
+
+          echo "Application configuration:"
+          cat src/main/resources/application.yml || true
+
+          echo "Test configuration:"
+          cat src/test/resources/application-test.yml || true
+
+          echo "Datasource-related environment variables:"
+          env | grep -E 'MONGODB|SPRING_DATA_MONGODB|VEHICLE_SALE_SERVICE' || true
+
+      - name: Build, tests and coverage
+        run: ./mvnw --batch-mode clean verify
+
+      - name: SonarQube analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          ./mvnw --batch-mode sonar:sonar \
+            -Dsonar.token="${SONAR_TOKEN}" \
+            -Dsonar.qualitygate.wait=true
+
+      - name: Show test failure details
+        if: failure()
+        run: |
+          echo "===== Surefire files ====="
+          find target/surefire-reports -maxdepth 1 -type f -print || true
+
+          echo "===== Test reports ====="
+          cat target/surefire-reports/*.txt || true
+
+          echo "===== Root causes ====="
+          grep -R -n -A 30 -B 5 "Caused by:" target/surefire-reports || true
