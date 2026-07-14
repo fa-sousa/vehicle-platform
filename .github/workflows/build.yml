@@ -1,4 +1,4 @@
-name: Build and SonarQube
+name: Build
 
 on:
   push:
@@ -8,62 +8,36 @@ on:
 
   pull_request:
     branches:
-      - develop
       - main
-    types:
-      - opened
-      - synchronize
-      - reopened
+
+permissions:
+  contents: read
 
 jobs:
   build:
-    name: Build, Tests and SonarQube
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: read
-      pull-requests: read
-
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set up Java 17
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: 17
           cache: maven
 
-      - name: Grant Maven Wrapper permission
-        run: chmod +x mvnw
+      - name: Build and tests
+        run: ./mvnw clean verify
 
-      - name: Show checked-out configuration
-        run: |
-          echo "Ref: ${GITHUB_REF}"
-          echo "Commit:"
-          git rev-parse HEAD
-
-      - name: Build, tests and coverage
-        run: ./mvnw --batch-mode clean verify
-
-      - name: SonarQube analysis
+      - name: SonarCloud
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          ./mvnw --batch-mode sonar:sonar \
-            -Dsonar.token="${SONAR_TOKEN}" \
-
-      - name: Show test failure details
-        if: failure()
-        run: |
-          echo "===== Surefire files ====="
-          find target/surefire-reports -maxdepth 1 -type f -print || true
-
-          echo "===== Test reports ====="
-          cat target/surefire-reports/*.txt || true
-
-          echo "===== Root causes ====="
-          grep -R -n -A 30 -B 5 "Caused by:" target/surefire-reports || true
+        run: >
+          ./mvnw
+          org.sonarsource.scanner.maven:sonar-maven-plugin:4.0.0.4121:sonar
+          -Dsonar.token=${SONAR_TOKEN}
