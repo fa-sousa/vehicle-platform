@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vehicle-platform
+  namespace: vehicle-system
+  labels:
+    app: vehicle-platform
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: vehicle-platform
+
+  template:
+    metadata:
+      labels:
+        app: vehicle-platform
+
+    spec:
+      containers:
+        - name: vehicle-platform
+          image: ghcr.io/fa-sousa/vehicle-platform:latest
+          imagePullPolicy: Always
+
+          ports:
+            - name: http
+              containerPort: 8082
+
+          env:
+            - name: SERVER_PORT
+              value: "8082"
+
+            - name: SPRING_DATA_MONGODB_URI
+              value: mongodb://platform_user:platform_password@vehicle-platform-mongodb:27017/vehicle_platform_db?authSource=admin
+
+            - name: VEHICLE_SALE_SERVICE_URL
+              value: http://vehicle-sale-service:8080
+
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8082
+            initialDelaySeconds: 25
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 10
+
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8082
+            initialDelaySeconds: 45
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 5
+
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "768Mi"
+              cpu: "500m"
